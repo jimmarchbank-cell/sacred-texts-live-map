@@ -24,6 +24,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -37,6 +39,7 @@ jobs:
           git add public/heat-map.png public/updated.json public/index.html
           if ! git diff --cached --quiet; then
             git commit -m "Update public aggregate map"
+            git pull --rebase origin main
             git push
           fi
       - uses: actions/configure-pages@v5
