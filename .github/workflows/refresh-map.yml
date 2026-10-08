@@ -1,0 +1,39 @@
+name: Refresh public heat map
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 * * * *'
+  push:
+    branches: [main]
+    paths: ['update_map.py', '.github/workflows/refresh-map.yml']
+permissions:
+  contents: read
+concurrency:
+  group: public-map-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow>=12,<13'
+      - name: Download and validate current public map
+        run: python update_map.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+      - name: Publish stable image URL
+        id: deployment
+        uses: actions/deploy-pages@v4
