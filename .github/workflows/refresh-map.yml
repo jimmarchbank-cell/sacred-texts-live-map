@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
     environment:
@@ -30,6 +30,15 @@ jobs:
       - run: python -m pip install 'Pillow>=12,<13'
       - name: Download and validate current public map
         run: python update_map.py
+      - name: Preserve the daily image and refresh record
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/heat-map.png public/updated.json public/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Update public aggregate map"
+            git push
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
