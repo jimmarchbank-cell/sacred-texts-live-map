@@ -2,6 +2,7 @@
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse
+from urllib.error import HTTPError
 from pathlib import Path
 from io import BytesIO
 from PIL import Image
@@ -36,7 +37,16 @@ def main():
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != "docs.google.com" or not parsed.path.startswith("/forms-images-rt/"):
         raise ValueError("Unexpected image source")
-    raw = fetch(url, 10_000_000)
+    try:
+        raw = fetch(url, 10_000_000)
+    except HTTPError as error:
+        # Forms sometimes redirects with an invalid full-frame crop suffix.
+        # Request the same public image at the same width without that crop.
+        target = urlparse(error.url)
+        suffix = "-fcrop64=1,00000000FFFFFFFF"
+        if error.code != 400 or target.scheme != "https" or not (target.hostname or "").endswith(".googleusercontent.com") or not error.url.endswith(suffix):
+            raise
+        raw = fetch(error.url[:-len(suffix)], 10_000_000)
     with Image.open(BytesIO(raw)) as img:
         if img.size != (740, 511):
             raise ValueError(f"Unexpected map dimensions: {img.size}")
