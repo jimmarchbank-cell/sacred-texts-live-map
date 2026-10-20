@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from urllib.error import HTTPError
 from pathlib import Path
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import json
 from datetime import datetime, timezone
 
@@ -53,7 +53,18 @@ def main():
         img.load()
         out = Path("public")
         out.mkdir(exist_ok=True)
-        img.convert("RGB").save(out / "heat-map.png")
+        image = img.convert("RGB")
+        # This public image is published daily. Keep its caption correct even
+        # while the source forms are rolling over to the new shared artwork.
+        label = Image.new("RGB", (260, 32), (237, 247, 251))
+        draw = ImageDraw.Draw(label)
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 24)
+        text = "UPDATED DAILY"
+        box = draw.textbbox((0, 0), text, font=font)
+        draw.text(((260 - (box[2] - box[0])) / 2, 4 - box[1]), text,
+                  font=font, fill=(0, 128, 74))
+        image.paste(label.resize((65, 8), Image.Resampling.LANCZOS), (128, 462))
+        image.save(out / "heat-map.png")
     (out / "updated.json").write_text(json.dumps({"copied_at": datetime.now(timezone.utc).isoformat(), "source": FORM}) + "\n")
     (out / "index.html").write_text('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sacred Texts Worldwide Participation Map</title><img src="heat-map.png" alt="Sacred Texts Worldwide participation map" style="max-width:100%;height:auto"></html>\n')
     print("Validated and copied public map (740 x 511).")
