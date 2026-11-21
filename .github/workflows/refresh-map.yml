@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      actions: read
       contents: write
       pages: write
       id-token: write
@@ -45,7 +46,20 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
+          name: pages-${{ github.run_id }}-${{ github.run_attempt }}
           path: public
+      - name: Wait for GitHub to list the uploaded map
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAP_ARTIFACT: pages-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          for attempt in {1..12}; do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=$MAP_ARTIFACT" --jq '.total_count') && [[ "$count" == 1 ]] && exit 0
+            sleep 5
+          done
+          exit 1
       - name: Publish stable image URL
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-${{ github.run_id }}-${{ github.run_attempt }}
