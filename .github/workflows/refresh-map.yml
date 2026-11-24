@@ -2,7 +2,8 @@ name: Refresh public heat map
 on:
   workflow_dispatch:
   schedule:
-    - cron: '47 12 * * *'
+    # Retry publication later in the day if a morning source refresh was delayed.
+    - cron: '47 12,18 * * *'
   push:
     branches: [main]
     paths: ['update_map.py', '.github/workflows/refresh-map.yml']
